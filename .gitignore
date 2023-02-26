@@ -1,0 +1,5 @@
+# Remove archives from repo
+*.7z
+# Remove local generated and IDE folders from repo
+.vscode/
+__pycache__/

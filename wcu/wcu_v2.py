@@ -238,7 +238,7 @@ class MainWindow(QtWidgets.QMainWindow, ConnectionCallback, CarDriverCallback, S
         self.imgRTV.setPixmap(QtGui.QPixmap(os.path.relpath('wcu\\assets\\connected.png')))
 
     def on_stream_first_frame(self, image: Image.Image):
-        self.btnRecordStream.setEnabled(True)
+        self.btnRecordStream.setEnabled(False)
         self.btnStartStopStream.setEnabled(True)
         self.btnStartStopStream.setText(Texts.STOP_STREAM)
         self.btnRecordStream.setText(Texts.START_RECORDING_STREAM)
