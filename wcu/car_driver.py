@@ -15,7 +15,7 @@ class CarDriverCallback:
 
     def on_steer_left(self):
         pass
-    
+
     def on_stop(self):
         pass
 
