@@ -178,7 +178,7 @@ class MainWindow(QtWidgets.QMainWindow, ConnectionCallback, CarDriverCallback, S
 
     def on_ready(self):
         self.btnQuit.setEnabled(True)
-        self.btnArmController.setEnabled(True)
+        self.btnArmController.setEnabled(False)
         self.btnRecordStream.setEnabled(False)
         self.btnStartStopStream.setEnabled(False)
         self.btnConnectDisconnect.setEnabled(True)
@@ -392,7 +392,7 @@ class MainWindow(QtWidgets.QMainWindow, ConnectionCallback, CarDriverCallback, S
         na = angle + 1 if opt == Opts.INC else angle - 1
         payload = data2json({'arm': 1, 'jid': joint[0], 'ag': na})  # super important model to be used in rpi
         self.logger.info(f'ArmController wants to send payload: {payload}')
-        if self.connection.send(payload) == 0:
+        if self.connection.send(payload) > 0:
             self.log_to_list(self.arm_controller.tag, f'Sent {payload} to robot.', GuiColors.GREEN)
             self.arm_controller.ujr(joint[1], na)
 
