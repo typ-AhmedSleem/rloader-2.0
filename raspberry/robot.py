@@ -1,12 +1,13 @@
 from sockets import ServerSocket, ConnectionClosedUnexpectedlyError, get_my_host
 import robot_utils as utils
-from components import Car
+from components import Car, Arm
 from logger import Logger
 from streamer import Streamer
 from threading import Thread, Event
 from time import sleep
 from socket import gethostbyname, timeout as SocketTimeoutError
 from json import dumps as data2json
+
 
 class Robot:
 
@@ -16,7 +17,8 @@ class Robot:
         self.host = get_my_host(True)
         # Robot components
         self.car = Car()
-        self.streamer = Streamer(address=(self.host, utils.PORT_RTV_SOCKET), resolution = (400,300))  # type: ignore
+        self.arm = Arm()
+        self.streamer = Streamer(address=(self.host, utils.PORT_RTV_SOCKET), resolution=(400, 300))
         # Server sockets
         self.communicationServer = ServerSocket()
         self.communicationServer.settimeout(20)
@@ -56,7 +58,7 @@ class Robot:
                             self.logger.error("Received empty packet which means connection was lost.")
                             raise ConnectionResetError()
                         # Handle received packets here
-                        dataModel = utils.convertJsonToModel(rcvd_bytes.decode("utf-8"))
+                        dataModel = utils.cvt_json2model(rcvd_bytes.decode("utf-8"))
                         self.logger.info(f"Received from WCU: {dataModel}")
                         # Handle incoming signal
                         if dataModel.signal:
@@ -99,6 +101,9 @@ class Robot:
                         # Handle manual driver commands
                         if dataModel.cmd and not self.car.is_auto_driving:
                             self.car.decide_direction(dataModel.cmd)
+                        # Handle Arm movement
+                        if dataModel.is_arm_cmd:
+                            self.arm.handle_mv(dataModel.arm_mv_spec)
                     except (ConnectionResetError, ConnectionAbortedError, ConnectionRefusedError):
                         connection_switcher.clear()
                         connection.close()
@@ -137,6 +142,7 @@ class Robot:
     def __exit__(self, *args):
         self.communicationServer.close()
         exit("Robot worked well till termination.")
-        
+
+
 if __name__ == '__main__':
     Robot().power_on()

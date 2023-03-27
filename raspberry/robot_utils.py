@@ -1,6 +1,4 @@
 import json as JSON
-from typing import Any
-
 
 DEFAULT_BUFFER_SIZE = 1024  # 1 KB per buffer
 FRAME_BUFFER_SIZE = 128 * 1024  # 128 KB per buffer
@@ -33,7 +31,7 @@ class ControlModes:
 
 class DataModel:
 
-    def __init__(self, data: dict[str, Any]) -> None:
+    def __init__(self, data) -> None:
         self.data = data
 
     @property
@@ -44,12 +42,21 @@ class DataModel:
     def cmd(self) -> str:
         return self.data.get('cmd', None)
 
+    @property
+    def is_arm_cmd(self) -> bool:
+        return ('arm' in self.data) and ('jid' in self.data) and ('ag' in self.data)
+
+    @property
+    def arm_mv_spec(self):
+        return self.data.get('jid', None), self.data.get('ag', None)
+
     def __repr__(self):
         return f"DataModel({self.data})"
 
-def convertJsonToModel(raw_json):
+
+def cvt_json2model(raw_json):
     try:
-        if raw_json is None or len(raw_json) ==0:
+        if raw_json is None or len(raw_json) == 0:
             raw_json = ""
         return DataModel(JSON.loads(raw_json))
     except JSON.JSONDecodeError:

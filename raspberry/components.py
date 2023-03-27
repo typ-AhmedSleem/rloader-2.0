@@ -1,11 +1,44 @@
-import RPi.GPIO as gpio
+# import RPi.GPIO as gpio
 from time import time, sleep
 from robot_utils import *
 from threading import Thread, Event
 from logger import Logger
 
 
-class SoundSensor():
+class gpio:
+    IN = 1
+    OUT = 2
+
+    INPUT = 3
+    OUTPUT = 4
+
+    LOW = 0
+    HIGH = 1
+
+    BCM = 2
+
+    @staticmethod
+    def cleanup():
+        pass
+
+    @staticmethod
+    def input(pin):
+        pass
+
+    @staticmethod
+    def setup(pin, mode):
+        pass
+
+    @staticmethod
+    def setmode(mode):
+        pass
+
+    @staticmethod
+    def output(pin, val):
+        pass
+
+
+class SoundSensor:
 
     def __init__(self, sample_time=10, detection_val=500) -> None:
         self.logger = Logger("Car-SoundSensor")
@@ -59,7 +92,6 @@ class LineFollowingSensor():
             gpio.setup(self.pin, gpio.IN)
             self.setup_done = True
             self.logger.success("Setup was successful.")
-            
 
     def is_on_black_line(self):
         return gpio.input(self.pin) == 1
@@ -106,7 +138,7 @@ class Car():
 
     def cleanup(self):
         gpio.cleanup()
-        
+
     @property
     def is_auto_driving(self):
         return self.auto_driver_switcher.is_set()
@@ -187,7 +219,8 @@ class CarComputerDriver:
             if car.is_idle:  # INFO: To stop listening to buzzer while moving
                 if car.soundSensor.peakAmplitude > lastPeakAmplitude:
                     lastPeakAmplitude = car.soundSensor.peakAmplitude
-                    car.logger.info(f"Detected Max-Amplitude of {lastPeakAmplitude} , Target is {car.soundSensor.DETECTION_VALUE}")
+                    car.logger.info(
+                        f"Detected Max-Amplitude of {lastPeakAmplitude} , Target is {car.soundSensor.DETECTION_VALUE}")
                 if car.soundSensor.is_buzzer_detected():
                     car.is_idle = False
                     car.logger.info(f"{'=' * 50}\nBUZZER DETECTED !!!\n{'=' * 50}")
@@ -205,3 +238,18 @@ class CarComputerDriver:
                 sleep(0.1)
         car.soundSensor.peakAmplitude = 0
         car.logger.info("ComputerDriver is no longer driving the car.")
+
+
+class Arm:
+
+    def handle_mv(self, arm_mv_spec):
+        """
+        :param arm_mv_spec: (jid, ag)
+        """
+        if len(arm_mv_spec) != 2:
+            return
+        if None in arm_mv_spec:
+            return
+        jid = arm_mv_spec[0]
+        tgt = arm_mv_spec[1]
+        # todo: WRITE ANGLE TO TARGET JOINT SERVO #

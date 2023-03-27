@@ -6,7 +6,6 @@ from sockets import ServerSocket
 from threading import Event, Thread
 from socket import timeout as SocketTimeoutError
 
-
 class Streamer:
 
     def __init__(self, address, resolution=(900, 600)) -> None:
