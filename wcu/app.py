@@ -3,12 +3,13 @@ import sys
 from PIL import Image
 from logger import Logger
 from datetime import datetime
-from json import dumps as data2Json
+from json import dumps as data2json
 from PyQt5 import QtGui, QtWidgets, QtCore
 from stream import StreamViewer, StreamViewerCallback
 from car_driver import CarManualDriver, CarDriverCallback
 from connection import ConnectionService, ConnectionCallback
-from wcu_utils import Status, GuiColors, GuiTexts as Texts, Directions
+from arm_controller import ArmControllerWindow, Operation as Opts
+from utils import Status, GuiColors, GuiTexts as Texts, Directions
 
 
 class MainWindow(QtWidgets.QMainWindow, ConnectionCallback, CarDriverCallback, StreamViewerCallback):
@@ -26,7 +27,8 @@ class MainWindow(QtWidgets.QMainWindow, ConnectionCallback, CarDriverCallback, S
         root.setFixedSize(self.WINDOW_SIZE)
         # INFO: Setup (RTV & Status) container
         self.rtvStatusContainer = QtWidgets.QWidget(root)
-        self.rtvStatusContainer.setGeometry(0, 0, self.WINDOW_SIZE.width() // 2, self.WINDOW_SIZE.height() - self.MARGIN_SIZE)
+        self.rtvStatusContainer.setGeometry(0, 0, self.WINDOW_SIZE.width() // 2,
+                                            self.WINDOW_SIZE.height() - self.MARGIN_SIZE)
         # Realtime Video stream ImageView
         self.imgRTV = QtWidgets.QLabel(self.rtvStatusContainer)
         self.imgRTV.setScaledContents(True)
@@ -79,15 +81,17 @@ class MainWindow(QtWidgets.QMainWindow, ConnectionCallback, CarDriverCallback, S
         self.btnQuit.setMinimumHeight(100)
         self.btnQuit.clicked.connect(self.close)
         self.btnQuit.setFont(QtGui.QFont("monospace", 15))
-        self.btnQuit.setGeometry(0, self.listLog.geometry().bottom() - self.BUTTON_HEIGHT, targetWidth, self.BUTTON_HEIGHT)
-        # Help button
-        self.btnHelp = QtWidgets.QPushButton(self.speedContainer)
-        self.btnHelp.setText("Show Help")
-        self.btnHelp.setMaximumHeight(100)
-        self.btnHelp.setMinimumHeight(100)
-        self.btnHelp.clicked.connect(self.showHelp)
-        self.btnHelp.setFont(QtGui.QFont("monospace", 15))
-        self.btnHelp.setGeometry(0, self.btnQuit.geometry().top() - (self.BUTTON_HEIGHT + self.MARGIN_SIZE), targetWidth, self.BUTTON_HEIGHT)
+        self.btnQuit.setGeometry(0, self.listLog.geometry().bottom() - self.BUTTON_HEIGHT, targetWidth,
+                                 self.BUTTON_HEIGHT)
+        # Arm Controller button
+        self.btnArmController = QtWidgets.QPushButton(self.speedContainer)
+        self.btnArmController.setMaximumHeight(100)
+        self.btnArmController.setMinimumHeight(100)
+        self.btnArmController.setText("Arm Controller")
+        self.btnArmController.clicked.connect(self.show_arm_controller)
+        self.btnArmController.setFont(QtGui.QFont("monospace", 15))
+        self.btnArmController.setGeometry(0, self.btnQuit.geometry().top() - (self.BUTTON_HEIGHT + self.MARGIN_SIZE),
+                                          targetWidth, self.BUTTON_HEIGHT)
         # Change control mode button
         self.btnSwitchControlMode = QtWidgets.QPushButton(self.speedContainer)
         self.btnSwitchControlMode.setMaximumHeight(100)
@@ -95,14 +99,16 @@ class MainWindow(QtWidgets.QMainWindow, ConnectionCallback, CarDriverCallback, S
         self.btnSwitchControlMode.setText("Switch Control Mode")
         self.btnSwitchControlMode.setFont(QtGui.QFont("monospace", 15))
         self.btnSwitchControlMode.clicked.connect(self.switch_control_mode)
-        self.btnSwitchControlMode.setGeometry(0, self.btnHelp.geometry().top() - (self.BUTTON_HEIGHT + self.MARGIN_SIZE), targetWidth, self.BUTTON_HEIGHT)
+        self.btnSwitchControlMode.setGeometry(0, self.btnArmController.geometry().top() - (
+            self.BUTTON_HEIGHT + self.MARGIN_SIZE), targetWidth, self.BUTTON_HEIGHT)
         # Start/Stop Recording button
         self.btnRecordStream = QtWidgets.QPushButton(self.speedContainer)
         self.btnRecordStream.setText(Texts.START_RECORDING_STREAM)
         self.btnRecordStream.setMaximumHeight(100)
         self.btnRecordStream.setMinimumHeight(100)
         self.btnRecordStream.setFont(QtGui.QFont("monospace", 15))
-        self.btnRecordStream.setGeometry(0, self.btnSwitchControlMode.geometry().top() - (self.BUTTON_HEIGHT + self.MARGIN_SIZE), targetWidth, self.BUTTON_HEIGHT)
+        self.btnRecordStream.setGeometry(0, self.btnSwitchControlMode.geometry().top() - (
+            self.BUTTON_HEIGHT + self.MARGIN_SIZE), targetWidth, self.BUTTON_HEIGHT)
         # Start/Stop Stream button
         self.btnStartStopStream = QtWidgets.QPushButton(self.speedContainer)
         self.btnStartStopStream.setText(Texts.START_STREAM)
@@ -110,7 +116,8 @@ class MainWindow(QtWidgets.QMainWindow, ConnectionCallback, CarDriverCallback, S
         self.btnStartStopStream.setMinimumHeight(100)
         self.btnStartStopStream.setFont(QtGui.QFont("monospace", 15))
         self.btnStartStopStream.clicked.connect(self.start_stop_stream)
-        self.btnStartStopStream.setGeometry(0, self.btnRecordStream.geometry().top() - (self.BUTTON_HEIGHT + self.MARGIN_SIZE), targetWidth, self.BUTTON_HEIGHT)
+        self.btnStartStopStream.setGeometry(0, self.btnRecordStream.geometry().top() - (
+            self.BUTTON_HEIGHT + self.MARGIN_SIZE), targetWidth, self.BUTTON_HEIGHT)
         # Connect/Disconnect button
         self.btnConnectDisconnect = QtWidgets.QPushButton(self.speedContainer)
         self.btnConnectDisconnect.setText("Connect")
@@ -119,7 +126,8 @@ class MainWindow(QtWidgets.QMainWindow, ConnectionCallback, CarDriverCallback, S
         self.btnConnectDisconnect.setMinimumHeight(100)
         self.btnConnectDisconnect.setFont(QtGui.QFont("monospace", 17, QtGui.QFont.Weight.Bold))
         self.btnConnectDisconnect.clicked.connect(self.connect_disconnect)
-        self.btnConnectDisconnect.setGeometry(0, self.btnStartStopStream.geometry().top() - (self.BUTTON_HEIGHT + self.MARGIN_SIZE), targetWidth, self.BUTTON_HEIGHT)
+        self.btnConnectDisconnect.setGeometry(0, self.btnStartStopStream.geometry().top() - (
+            self.BUTTON_HEIGHT + self.MARGIN_SIZE), targetWidth, self.BUTTON_HEIGHT)
         # Robot control commands display
         labelHeight = self.btnConnectDisconnect.geometry().top() - self._lblTitle.geometry().bottom() - self.MARGIN_SIZE * 2
         self.lblStatus = QtWidgets.QLabel(self.speedContainer)
@@ -130,7 +138,8 @@ class MainWindow(QtWidgets.QMainWindow, ConnectionCallback, CarDriverCallback, S
         self.lblStatus.setFrameShape(QtWidgets.QFrame.Shape.Box)
         self.lblStatus.setFont(QtGui.QFont("monospace", 20, weight=QtGui.QFont.Weight.Medium))
         self.lblStatus.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
-        self.lblStatus.setGeometry(0, self._lblTitle.geometry().bottom() + self.MARGIN_SIZE, self._lblTitle.width(), labelHeight)
+        self.lblStatus.setGeometry(0, self._lblTitle.geometry().bottom() + self.MARGIN_SIZE, self._lblTitle.width(),
+                                   labelHeight)
         # Set container and root to window
         self.grabKeyboard()
         self.setCentralWidget(root)
@@ -138,11 +147,12 @@ class MainWindow(QtWidgets.QMainWindow, ConnectionCallback, CarDriverCallback, S
         self.setMinimumSize(self.WINDOW_SIZE.width(), self.WINDOW_SIZE.height())
         self.setMaximumSize(self.WINDOW_SIZE.width(), self.WINDOW_SIZE.height())
         self.showFullScreen()
-        ## WCU features ##
+        # WCU features #
         self.logger = Logger("WCU-GUI")
         self.driver = CarManualDriver(self)
         self.streamViewer = StreamViewer(self)
         self.connection = ConnectionService(self)
+        self.arm_controller = ArmControllerWindow(self.handle_arm_data)
 
     @property
     def status(self) -> int:
@@ -150,14 +160,14 @@ class MainWindow(QtWidgets.QMainWindow, ConnectionCallback, CarDriverCallback, S
 
     def on_init(self):
         # Reset all gui controls
-        self.btnHelp.setEnabled(False)
+        self.btnArmController.setEnabled(False)
         self.btnQuit.setEnabled(False)
         self.btnRecordStream.setEnabled(False)
         self.btnStartStopStream.setEnabled(False)
         self.btnConnectDisconnect.setEnabled(False)
         self.btnSwitchControlMode.setEnabled(False)
-        self.updateStatusLabelText("Initializing...")
-        self.logToList("ConnectionService", "Initializing...")
+        self.update_status_lbl_text("Initializing...")
+        self.log_to_list("ConnectionService", "Initializing...")
         self.imgRTV.setPixmap(QtGui.QPixmap(QtGui.QImage(os.path.relpath('wcu\\assets\\disconnected.png'))))
         # Create necessary directories if needed
         try:
@@ -167,30 +177,31 @@ class MainWindow(QtWidgets.QMainWindow, ConnectionCallback, CarDriverCallback, S
             self.logger.success("Stream folder exists.")
 
     def on_ready(self):
-        # Enable connect button
-        self.btnHelp.setEnabled(True)
         self.btnQuit.setEnabled(True)
+        self.btnArmController.setEnabled(True)
         self.btnRecordStream.setEnabled(False)
         self.btnStartStopStream.setEnabled(False)
         self.btnConnectDisconnect.setEnabled(True)
         self.btnSwitchControlMode.setEnabled(False)
-        self.updateStatusLabelText("Ready to connect...")
+        self.update_status_lbl_text("Ready to connect...")
         self.btnConnectDisconnect.setStyleSheet(f"color: {GuiColors.BLUE}")
-        self.logToList("ConnectionService", "Ready to connect", GuiColors.GREEN)
+        self.log_to_list("ConnectionService", "Ready to connect", GuiColors.GREEN)
 
     def on_connecting(self):
         self.btnRecordStream.setEnabled(False)
+        self.btnArmController.setEnabled(False)
         self.lblStatus.setText(Texts.CONNECTING)
         self.btnStartStopStream.setEnabled(False)
         self.btnConnectDisconnect.setEnabled(False)
         self.btnSwitchControlMode.setEnabled(False)
         self.btnStartStopStream.setText(Texts.START_STREAM)
         self.btnConnectDisconnect.setText(Texts.CONNECTING)
-        self.updateStatusLabelText("Connecting to Robot...")
+        self.update_status_lbl_text("Connecting to Robot...")
         self.btnConnectDisconnect.setStyleSheet(f"color: {GuiColors.BLUE}")
-        self.logToList("ConnectionService", "Connecting to robot...", GuiColors.BLUE)
+        self.log_to_list("ConnectionService", "Connecting to robot...", GuiColors.BLUE)
 
     def on_connect(self):
+        self.btnArmController.setEnabled(True)
         self.btnStartStopStream.setEnabled(True)
         self.btnConnectDisconnect.setEnabled(True)
         self.btnSwitchControlMode.setEnabled(True)
@@ -199,23 +210,25 @@ class MainWindow(QtWidgets.QMainWindow, ConnectionCallback, CarDriverCallback, S
         self.btnStartStopStream.setText(Texts.START_STREAM)
         self.btnRecordStream.setText(Texts.START_RECORDING_STREAM)
         self.btnConnectDisconnect.setStyleSheet(f"color: {GuiColors.RED}")
-        self.updateStatusLabelText("Waiting for commands...", GuiColors.BLUE)
-        self.logToList("ConnectionService", "Established a connection with robot successfully.", GuiColors.GREEN)
+        self.update_status_lbl_text("Waiting for commands...", GuiColors.BLUE)
+        self.log_to_list("ConnectionService", "Established a connection with robot successfully.", GuiColors.GREEN)
 
     def on_fail(self, reason: str | None):
         self.btnRecordStream.setEnabled(False)
+        self.btnArmController.setEnabled(False)
         self.btnStartStopStream.setEnabled(False)
         self.btnConnectDisconnect.setEnabled(True)
         self.btnSwitchControlMode.setEnabled(False)
         self.btnConnectDisconnect.setText(Texts.RECONNECT)
         self.btnStartStopStream.setText(Texts.START_STREAM)
-        self.updateStatusLabelText(f"{reason}", GuiColors.RED)
+        self.update_status_lbl_text(f"{reason}", GuiColors.RED)
         self.btnRecordStream.setText(Texts.START_RECORDING_STREAM)
-        self.logToList("ConnectionService", f"{reason}", GuiColors.RED)
+        self.log_to_list("ConnectionService", f"{reason}", GuiColors.RED)
         self.btnConnectDisconnect.setStyleSheet(f"color: {GuiColors.BLUE}")
 
     def on_disconnect(self):
         self.btnRecordStream.setEnabled(False)
+        self.btnArmController.setEnabled(False)
         self.btnStartStopStream.setEnabled(False)
         self.btnConnectDisconnect.setEnabled(True)
         self.btnSwitchControlMode.setEnabled(False)
@@ -224,18 +237,18 @@ class MainWindow(QtWidgets.QMainWindow, ConnectionCallback, CarDriverCallback, S
         self.btnStartStopStream.setText(Texts.START_STREAM)
         self.btnRecordStream.setText(Texts.START_RECORDING_STREAM)
         self.btnConnectDisconnect.setStyleSheet(f"color: {GuiColors.BLUE}")
-        self.logToList("ConnectionService", "Lost connection with robot.", GuiColors.RED)
+        self.log_to_list("ConnectionService", "Lost connection with robot.", GuiColors.RED)
 
     def on_stream_connecting(self):
         self.btnStartStopStream.setEnabled(False)
         self.btnStartStopStream.setText(Texts.REQUESTING_STREAM)
-        self.logToList("StreamViewer", "Connecting to robot stream service...", GuiColors.BLUE)
+        self.log_to_list("StreamViewer", "Connecting to robot stream service...", GuiColors.BLUE)
         self.imgRTV.setPixmap(QtGui.QPixmap(os.path.relpath('wcu\\assets\\loading.png')))
 
     def on_stream_start(self):
         self.btnStartStopStream.setEnabled(True)
         self.btnStartStopStream.setText(Texts.STOP_STREAM)
-        self.logToList("StreamViewer", "Started viewing stream.", GuiColors.GREEN)
+        self.log_to_list("StreamViewer", "Started viewing stream.", GuiColors.GREEN)
         self.imgRTV.setPixmap(QtGui.QPixmap(os.path.relpath('wcu\\assets\\connected.png')))
 
     def on_stream_first_frame(self, image: Image.Image):
@@ -243,12 +256,12 @@ class MainWindow(QtWidgets.QMainWindow, ConnectionCallback, CarDriverCallback, S
         self.btnStartStopStream.setEnabled(True)
         self.btnStartStopStream.setText(Texts.STOP_STREAM)
         self.btnRecordStream.setText(Texts.START_RECORDING_STREAM)
-        self.logToList("StreamViewer", "Received first frame from stream.", GuiColors.GREEN)
+        self.log_to_list("StreamViewer", "Received first frame from stream.", GuiColors.GREEN)
 
     def on_stream_receive_frame(self, image: Image.Image):
         try:
             self.imgRTV.setPixmap(QtGui.QPixmap(QtGui.QImage(os.path.relpath('wcu\\stream\\lastFrame.jpeg'))))
-            self.logToList("StreamViewer", f"Received frame: {image.size} | {image.format}", GuiColors.BLUE)
+            self.log_to_list("StreamViewer", f"Received frame: {image.size} | {image.format}", GuiColors.BLUE)
         except Exception as e:
             self.logger.error(e)
             # self.logToList("StreamViewer", f"Error displaying frame: {e}", GuiColors.BLUE)
@@ -256,7 +269,7 @@ class MainWindow(QtWidgets.QMainWindow, ConnectionCallback, CarDriverCallback, S
     def on_stream_fail(self, reason: str):
         self.btnStartStopStream.setEnabled(True)
         self.btnStartStopStream.setText(Texts.START_STREAM)
-        self.logToList("StreamViewer", f"Failed to request stream. Reason('{reason}').", GuiColors.RED)
+        self.log_to_list("StreamViewer", f"Failed to request stream. Reason('{reason}').", GuiColors.RED)
         self.imgRTV.setPixmap(QtGui.QPixmap(os.path.join(os.path.relpath('wcu\\assets\\disconnected.png'))))
 
     def on_stream_stop(self):
@@ -264,56 +277,58 @@ class MainWindow(QtWidgets.QMainWindow, ConnectionCallback, CarDriverCallback, S
         self.btnStartStopStream.setEnabled(False)
         self.btnStartStopStream.setText(Texts.START_STREAM)
         self.btnRecordStream.setText(Texts.START_RECORDING_STREAM)
-        self.logToList("ConnectionService", "Lost connection with robot.")
+        self.log_to_list("ConnectionService", "Lost connection with robot.")
         self.imgRTV.setPixmap(QtGui.QPixmap(os.path.join(os.path.relpath('wcu\\assets\\disconnected.png'))))
 
     def on_drive_forward(self):
-        if self.connection.send(data2Json({"cmd": Directions.CMD_DRIVE_FORWARD})) > 0:
-            self.logToList("CarDriver", "Moved forward.", )
+        if self.connection.send(data2json({"cmd": Directions.CMD_DRIVE_FORWARD})) > 0:
+            self.log_to_list("CarDriver", "Moved forward.", )
             self.lblStatus.setText("Moved forward")
         else:
             self.connection.disconnect()
-            self.logToList("ConnectionService", "Lost connection with robot")
+            self.log_to_list("ConnectionService", "Lost connection with robot")
 
     def on_drive_backward(self):
-        if self.connection.send(data2Json({"cmd": Directions.CMD_DRIVE_BACKWARD})) > 0:
-            self.logToList("CarDriver", "Moved backward.", )
+        if self.connection.send(data2json({"cmd": Directions.CMD_DRIVE_BACKWARD})) > 0:
+            self.log_to_list("CarDriver", "Moved backward.", )
             self.lblStatus.setText("Moved backward")
         else:
             self.connection.disconnect()
-            self.logToList("ConnectionService", "Lost connection with robot")
+            self.log_to_list("ConnectionService", "Lost connection with robot")
 
     def on_steer_right(self):
-        if self.connection.send(data2Json({"cmd": Directions.CMD_ROTATE_RIGHT})) > 0:
-            self.logToList("CarDriver", "Steered right.", )
+        if self.connection.send(data2json({"cmd": Directions.CMD_ROTATE_RIGHT})) > 0:
+            self.log_to_list("CarDriver", "Steered right.", )
             self.lblStatus.setText("Steered right.")
         else:
             self.connection.disconnect()
-            self.logToList("ConnectionService", "Lost connection with robot")
+            self.log_to_list("ConnectionService", "Lost connection with robot")
 
     def on_steer_left(self):
-        if self.connection.send(data2Json({"cmd": Directions.CMD_ROTATE_LEFT})) > 0:
-            self.logToList("CarDriver", "Steered left.", )
+        if self.connection.send(data2json({"cmd": Directions.CMD_ROTATE_LEFT})) > 0:
+            self.log_to_list("CarDriver", "Steered left.", )
             self.lblStatus.setText("Steered left.")
         else:
             self.connection.disconnect()
-            self.logToList("ConnectionService", "Lost connection with robot")
+            self.log_to_list("ConnectionService", "Lost connection with robot")
 
     def on_stop(self):
-        if self.connection.send(data2Json({"cmd": Directions.CMD_STOP})) > 0:
-            self.logToList("CarDriver", "Activated Brakes.", )
+        if self.connection.send(data2json({"cmd": Directions.CMD_STOP})) > 0:
+            self.log_to_list("CarDriver", "Activated Brakes.", )
             self.lblStatus.setText("Stopped moving.")
         else:
             self.connection.disconnect()
-            self.logToList("ConnectionService", "Lost connection with robot")
+            self.log_to_list("ConnectionService", "Lost connection with robot")
 
     def showEvent(self, event: QtGui.QShowEvent) -> None:
-        self.logToList("WCU", "GUI Initialized Successfully.")
-        self.logToList("ConnectionService", "Press (Connect) button to connect to Robot.")
+        self.log_to_list("WCU", "GUI Initialized Successfully.")
+        self.log_to_list("ConnectionService", "Press (Connect) button to connect to Robot.")
         return super().showEvent(event)
 
     def closeEvent(self, a0: QtGui.QCloseEvent) -> None:
-        self.logToList("WCU", "Closing...")
+        self.log_to_list("WCU", "Closing...")
+        if self.arm_controller.isVisible():
+            self.arm_controller.close()
         self.connection.disconnect()
         self.streamViewer.stop_stream_view()
         return super().closeEvent(a0)
@@ -336,7 +351,7 @@ class MainWindow(QtWidgets.QMainWindow, ConnectionCallback, CarDriverCallback, S
     def keyReleaseEvent(self, event: QtGui.QKeyEvent) -> None:
         return super().keyReleaseEvent(event)
 
-    def logToList(self, tag: str,  msg: str, color: str = GuiColors.BLACK):
+    def log_to_list(self, tag: str, msg: str, color: str = GuiColors.BLACK):
         # Append msg to log list and scroll to bottom
         item = QtWidgets.QListWidgetItem()
         item.setForeground(QtGui.QColor(color))
@@ -345,7 +360,7 @@ class MainWindow(QtWidgets.QMainWindow, ConnectionCallback, CarDriverCallback, S
         self.listLog.addItem(item)
         self.listLog.scrollToBottom()
 
-    def updateStatusLabelText(self, msg: str, color=GuiColors.BLACK):
+    def update_status_lbl_text(self, msg: str, color=GuiColors.BLACK):
         # Show text also on commands label
         self.lblStatus.setText(msg)
         self.lblStatus.setStyleSheet(f"color: {color};")
@@ -359,9 +374,9 @@ class MainWindow(QtWidgets.QMainWindow, ConnectionCallback, CarDriverCallback, S
 
     def switch_control_mode(self):
         if self.connection.request_SCM():
-            self.logToList("Robot", "Switched control mode.")
+            self.log_to_list("Robot", "Switched control mode.")
         else:
-            self.logToList("Robot", "Can't switch control mode.")
+            self.log_to_list("Robot", "Can't switch control mode.")
 
     def start_stop_stream(self):
         if self.streamViewer.viewing_stream:
@@ -373,8 +388,18 @@ class MainWindow(QtWidgets.QMainWindow, ConnectionCallback, CarDriverCallback, S
             if self.connection.request_start_stream():
                 self.streamViewer.start_stream_view()
 
-    def showHelp(self):
-        pass
+    def handle_arm_data(self, joint, angle, opt):
+        na = angle + 1 if opt == Opts.INC else angle - 1
+        payload = data2json({'arm': 1, 'jid': joint[0], 'ag': na})  # super important model to be used in rpi
+        self.logger.info(f'ArmController wants to send payload: {payload}')
+        if self.connection.send(payload) == 0:
+            self.log_to_list(self.arm_controller.tag, f'Sent {payload} to robot.', GuiColors.GREEN)
+            self.arm_controller.ujr(joint[1], na)
+
+    def show_arm_controller(self):
+        if self.arm_controller is None:
+            self.arm_controller = ArmControllerWindow(self.handle_arm_data)
+        self.arm_controller.show()
 
 
 def myExceptHook(type, value, tback):

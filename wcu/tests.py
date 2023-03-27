@@ -7,9 +7,6 @@ from car_driver import CarManualDriver, CarDriverCallback
 from stream import StreamViewer, StreamViewerCallback
 
 
-import cv2 as cv
-import numpy as np
-
 class TestService(ConnectionCallback):
 
     def __new__(cls):

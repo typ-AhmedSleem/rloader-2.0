@@ -3,7 +3,7 @@ import struct
 import pickle
 from PIL import Image
 from io import BytesIO
-import wcu_utils as utils
+import utils
 from logger import Logger
 from threading import Thread, Event
 from sockets import ClientSocket
