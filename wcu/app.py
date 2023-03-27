@@ -160,9 +160,9 @@ class MainWindow(QtWidgets.QMainWindow, ConnectionCallback, CarDriverCallback, S
 
     def on_init(self):
         # Reset all gui controls
-        self.btnArmController.setEnabled(False)
         self.btnQuit.setEnabled(False)
         self.btnRecordStream.setEnabled(False)
+        self.btnArmController.setEnabled(False)
         self.btnStartStopStream.setEnabled(False)
         self.btnConnectDisconnect.setEnabled(False)
         self.btnSwitchControlMode.setEnabled(False)
@@ -237,6 +237,8 @@ class MainWindow(QtWidgets.QMainWindow, ConnectionCallback, CarDriverCallback, S
         self.btnStartStopStream.setText(Texts.START_STREAM)
         self.btnRecordStream.setText(Texts.START_RECORDING_STREAM)
         self.btnConnectDisconnect.setStyleSheet(f"color: {GuiColors.BLUE}")
+        if self.arm_controller.isVisible():
+            self.arm_controller.close()
         self.log_to_list("ConnectionService", "Lost connection with robot.", GuiColors.RED)
 
     def on_stream_connecting(self):
@@ -393,8 +395,8 @@ class MainWindow(QtWidgets.QMainWindow, ConnectionCallback, CarDriverCallback, S
         payload = data2json({'arm': 1, 'jid': joint[0], 'ag': na})  # super important model to be used in rpi
         self.logger.info(f'ArmController wants to send payload: {payload}')
         if self.connection.send(payload) > 0:
-            self.log_to_list(self.arm_controller.tag, f'Sent {payload} to robot.', GuiColors.GREEN)
-            self.arm_controller.ujr(joint[1], na)
+            self.log_to_list(self.arm_controller.tag, f"'{joint[0]}' by {na} degrees.", GuiColors.GREEN)
+            self.arm_controller.ujr(joint[0], na)
 
     def show_arm_controller(self):
         if self.arm_controller is None:

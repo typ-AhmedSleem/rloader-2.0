@@ -1,42 +1,8 @@
-# import RPi.GPIO as gpio
+import RPi.GPIO as gpio
 from time import time, sleep
 from robot_utils import *
 from threading import Thread, Event
 from logger import Logger
-
-
-class gpio:
-    IN = 1
-    OUT = 2
-
-    INPUT = 3
-    OUTPUT = 4
-
-    LOW = 0
-    HIGH = 1
-
-    BCM = 2
-
-    @staticmethod
-    def cleanup():
-        pass
-
-    @staticmethod
-    def input(pin):
-        pass
-
-    @staticmethod
-    def setup(pin, mode):
-        pass
-
-    @staticmethod
-    def setmode(mode):
-        pass
-
-    @staticmethod
-    def output(pin, val):
-        pass
-
 
 class SoundSensor:
 
@@ -97,7 +63,7 @@ class LineFollowingSensor():
         return gpio.input(self.pin) == 1
 
 
-class Car():
+class Car:
 
     def __init__(self) -> None:
         self.logger = Logger("Car")
@@ -240,7 +206,35 @@ class CarComputerDriver:
         car.logger.info("ComputerDriver is no longer driving the car.")
 
 
+class Motor:
+
+    def __init__(self, jid: str, dtp: int):
+        self.jid = jid
+        self.d = dtp
+        self.ag = 0
+
+    def wag(self, ag: int, logger: Logger):
+        if ag > 0:
+            self.ag = min(ag, 180)
+        elif ag < 0:
+            self.ag = max(ag, -180)
+        # todo: WRITE ANGLE TO MOTOR
+        logger.success(f"{self.jid} moved to angle {self.ag}")
+
+
 class Arm:
+
+    def __init__(self):
+        self.logger = Logger('Arm')
+        # Servo motors
+        self.jts = {
+            'joint_1': Motor('joint_1', -1),
+            'joint_2': Motor('joint_2', -1),
+            'joint_3': Motor('joint_3', -1),
+            'joint_4': Motor('joint_4', -1),
+            'joint_5': Motor('joint_5', -1),
+            'joint_6': Motor('joint_6', -1)
+        }
 
     def handle_mv(self, arm_mv_spec):
         """
@@ -250,6 +244,8 @@ class Arm:
             return
         if None in arm_mv_spec:
             return
-        jid = arm_mv_spec[0]
-        tgt = arm_mv_spec[1]
-        # todo: WRITE ANGLE TO TARGET JOINT SERVO #
+        jid: str = arm_mv_spec[0]
+        tgt: int = arm_mv_spec[1]
+        jt: Motor = self.jts.get(jid, None)
+        if jt is not None:
+            jt.wag(tgt, self.logger)
