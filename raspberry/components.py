@@ -3,6 +3,7 @@ from time import time, sleep
 from robot_utils import *
 from threading import Thread, Event
 from logger import Logger
+from gpiozero import Servo
 
 class SoundSensor:
 
@@ -212,13 +213,14 @@ class Motor:
         self.jid = jid
         self.d = dtp
         self.ag = 0
+        self.sm = Servo(dtp)
 
     def wag(self, ag: int, logger: Logger):
         if ag > 0:
             self.ag = min(ag, 180)
         elif ag < 0:
             self.ag = max(ag, -180)
-        # todo: WRITE ANGLE TO MOTOR
+        self.sm.value = ag
         logger.success(f"{self.jid} moved to angle {self.ag}")
 
 

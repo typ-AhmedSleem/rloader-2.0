@@ -178,8 +178,8 @@ class MainWindow(QtWidgets.QMainWindow, ConnectionCallback, CarDriverCallback, S
 
     def on_ready(self):
         self.btnQuit.setEnabled(True)
-        self.btnArmController.setEnabled(False)
         self.btnRecordStream.setEnabled(False)
+        self.btnArmController.setEnabled(False)
         self.btnStartStopStream.setEnabled(False)
         self.btnConnectDisconnect.setEnabled(True)
         self.btnSwitchControlMode.setEnabled(False)
