@@ -3,7 +3,10 @@ from time import time, sleep
 from robot_utils import *
 from threading import Thread, Event
 from logger import Logger
-from gpiozero import Servo
+import busio
+import board
+from adafruit_pca9685 import PCA9685 as I2CServoBridge
+
 
 class SoundSensor:
 
@@ -207,36 +210,20 @@ class CarComputerDriver:
         car.logger.info("ComputerDriver is no longer driving the car.")
 
 
-class Motor:
-
-    def __init__(self, jid: str, dtp: int):
-        self.jid = jid
-        self.d = dtp
-        self.ag = 0
-        self.sm = Servo(dtp)
-
-    def wag(self, ag: int, logger: Logger):
-        if ag > 0:
-            self.ag = min(ag, 180)
-        elif ag < 0:
-            self.ag = max(ag, -180)
-        self.sm.value = ag
-        logger.success(f"{self.jid} moved to angle {self.ag}")
-
-
 class Arm:
 
     def __init__(self):
         self.logger = Logger('Arm')
-        # Servo motors
-        self.jts = {
-            'joint_1': Motor('joint_1', -1),
-            'joint_2': Motor('joint_2', -1),
-            'joint_3': Motor('joint_3', -1),
-            'joint_4': Motor('joint_4', -1),
-            'joint_5': Motor('joint_5', -1),
-            'joint_6': Motor('joint_6', -1)
-        }
+        # Servo pulse width
+        self.servo_min = 1000
+        self.servo_max = 2000
+        # Servo angles
+        self.min_angle = 0
+        self.def_angle = 90
+        self.max_angle = 180
+        i2c = busio.I2C(board.SCL, board.SDA)
+        self.bridge = I2CServoBridge(i2c)
+        self.bridge.frequency = 50
 
     def handle_mv(self, arm_mv_spec):
         """
@@ -246,8 +233,16 @@ class Arm:
             return
         if None in arm_mv_spec:
             return
-        jid: str = arm_mv_spec[0]
-        tgt: int = arm_mv_spec[1]
-        jt: Motor = self.jts.get(jid, None)
-        if jt is not None:
-            jt.wag(tgt, self.logger)
+        joint: str = arm_mv_spec[0]
+        target: int = int(arm_mv_spec[1])
+        try:
+            jid = int(joint.split("_")[1])
+            if jid:
+                self.bridge.channels[jid].duty_cycle = self.angle_to_pluse(180 if target == 1 else 0) # Forward or Reverse
+                sleep(0.1)
+                self.bridge.channels[jid].duty_cycle = self.angle_to_pluse(90)
+        except: 
+            return
+        
+    def angle_to_pluse(self, angle):
+        return int((self.servo_max - self.servo_min) * angle / (self.max_angle - self.min_angle) + self.servo_min)
