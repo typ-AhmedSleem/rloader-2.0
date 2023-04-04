@@ -4,7 +4,7 @@ from logger import Logger
 from sys import argv as args
 from connection import ConnectionService, ConnectionCallback
 from car_driver import CarManualDriver, CarDriverCallback
-from stream import StreamViewer, StreamViewerCallback
+from stream_worker import StreamViewer, StreamViewerCallback
 
 
 class TestService(ConnectionCallback):

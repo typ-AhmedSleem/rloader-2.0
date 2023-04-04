@@ -1,5 +1,5 @@
 from logger import Logger
-import utils as utils
+import app_utils as utils
 from threading import Event, Thread
 from json import dumps as data2Json
 from sockets import ClientSocket, SocketError
