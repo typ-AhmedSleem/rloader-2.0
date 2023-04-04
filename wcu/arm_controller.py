@@ -153,6 +153,5 @@ class ArmControllerWindow(QtWidgets.QWidget):
 
     def ujr(self, joint: str, new_pos: int):
         self.joints[joint] = new_pos
-        print(f'ujr: {joint} | {new_pos}')
         if joint == Joints.Joint_6[0]:
             self.lbls[Joints.Joint_6[0]].setText("Open hand" if new_pos == Operation.UP else 'Close hand')
