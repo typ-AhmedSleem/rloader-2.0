@@ -5,11 +5,11 @@ from logger import Logger
 from datetime import datetime
 from json import dumps as data2json
 from PyQt5 import QtGui, QtWidgets, QtCore
-from stream import StreamViewer, StreamViewerCallback
+from stream_worker import StreamViewer, StreamViewerCallback
 from car_driver import CarManualDriver, CarDriverCallback
 from connection import ConnectionService, ConnectionCallback
 from arm_controller import ArmControllerWindow, Operation as Opts
-from utils import Status, GuiColors, GuiTexts as Texts, Directions
+from app_utils import Status, GuiColors, GuiTexts as Texts, Directions
 
 
 class MainWindow(QtWidgets.QMainWindow, ConnectionCallback, CarDriverCallback, StreamViewerCallback):
@@ -81,8 +81,7 @@ class MainWindow(QtWidgets.QMainWindow, ConnectionCallback, CarDriverCallback, S
         self.btnQuit.setMinimumHeight(100)
         self.btnQuit.clicked.connect(self.close)
         self.btnQuit.setFont(QtGui.QFont("monospace", 15))
-        self.btnQuit.setGeometry(0, self.listLog.geometry().bottom() - self.BUTTON_HEIGHT, targetWidth,
-                                 self.BUTTON_HEIGHT)
+        self.btnQuit.setGeometry(0, self.listLog.geometry().bottom() - self.BUTTON_HEIGHT, targetWidth, self.BUTTON_HEIGHT)
         # Arm Controller button
         self.btnArmController = QtWidgets.QPushButton(self.speedContainer)
         self.btnArmController.setMaximumHeight(100)
@@ -90,8 +89,7 @@ class MainWindow(QtWidgets.QMainWindow, ConnectionCallback, CarDriverCallback, S
         self.btnArmController.setText("Arm Controller")
         self.btnArmController.clicked.connect(self.show_arm_controller)
         self.btnArmController.setFont(QtGui.QFont("monospace", 15))
-        self.btnArmController.setGeometry(0, self.btnQuit.geometry().top() - (self.BUTTON_HEIGHT + self.MARGIN_SIZE),
-                                          targetWidth, self.BUTTON_HEIGHT)
+        self.btnArmController.setGeometry(0, self.btnQuit.geometry().top() - (self.BUTTON_HEIGHT + self.MARGIN_SIZE), targetWidth, self.BUTTON_HEIGHT)
         # Change control mode button
         self.btnSwitchControlMode = QtWidgets.QPushButton(self.speedContainer)
         self.btnSwitchControlMode.setMaximumHeight(100)
@@ -138,8 +136,7 @@ class MainWindow(QtWidgets.QMainWindow, ConnectionCallback, CarDriverCallback, S
         self.lblStatus.setFrameShape(QtWidgets.QFrame.Shape.Box)
         self.lblStatus.setFont(QtGui.QFont("monospace", 20, weight=QtGui.QFont.Weight.Medium))
         self.lblStatus.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
-        self.lblStatus.setGeometry(0, self._lblTitle.geometry().bottom() + self.MARGIN_SIZE, self._lblTitle.width(),
-                                   labelHeight)
+        self.lblStatus.setGeometry(0, self._lblTitle.geometry().bottom() + self.MARGIN_SIZE, self._lblTitle.width(), labelHeight)
         # Set container and root to window
         self.grabKeyboard()
         self.setCentralWidget(root)
@@ -147,7 +144,7 @@ class MainWindow(QtWidgets.QMainWindow, ConnectionCallback, CarDriverCallback, S
         self.setMinimumSize(self.WINDOW_SIZE.width(), self.WINDOW_SIZE.height())
         self.setMaximumSize(self.WINDOW_SIZE.width(), self.WINDOW_SIZE.height())
         self.showFullScreen()
-        # WCU features #
+        # WCU modules #
         self.logger = Logger("WCU-GUI")
         self.driver = CarManualDriver(self)
         self.streamViewer = StreamViewer(self)
@@ -258,11 +255,16 @@ class MainWindow(QtWidgets.QMainWindow, ConnectionCallback, CarDriverCallback, S
         self.btnStartStopStream.setEnabled(True)
         self.btnStartStopStream.setText(Texts.STOP_STREAM)
         self.btnRecordStream.setText(Texts.START_RECORDING_STREAM)
-        self.log_to_list("StreamViewer", "Received first frame from stream.", GuiColors.GREEN)
+        try:
+            self.imgRTV.setPixmap(QtGui.QPixmap(QtGui.QImage(os.path.relpath('stream\\lastFrame.jpeg'))))
+            self.log_to_list("StreamViewer", f"Received frame: {image.size} | {image.format}", GuiColors.BLUE)
+            self.log_to_list("StreamViewer", "Received first frame from stream.", GuiColors.GREEN)
+        except Exception as e:
+            self.logger.error(e)
 
     def on_stream_receive_frame(self, image: Image.Image):
         try:
-            self.imgRTV.setPixmap(QtGui.QPixmap(QtGui.QImage(os.path.relpath('wcu\\stream\\lastFrame.jpeg'))))
+            self.imgRTV.setPixmap(QtGui.QPixmap(QtGui.QImage(os.path.relpath('stream\\lastFrame.jpeg'))))
             self.log_to_list("StreamViewer", f"Received frame: {image.size} | {image.format}", GuiColors.BLUE)
         except Exception as e:
             self.logger.error(e)
@@ -390,13 +392,11 @@ class MainWindow(QtWidgets.QMainWindow, ConnectionCallback, CarDriverCallback, S
             if self.connection.request_start_stream():
                 self.streamViewer.start_stream_view()
 
-    def handle_arm_data(self, joint, angle, opt):
-        na = angle + 1 if opt == Opts.INC else angle - 1
-        payload = data2json({'arm': 1, 'jid': joint[0], 'ag': na})  # super important model to be used in rpi
-        self.logger.info(f'ArmController wants to send payload: {payload}')
+    def handle_arm_data(self, joint, opt):
+        payload = data2json({'arm': 1, 'jid': joint[0], 'ag': opt})  # super important model to be used in rpi
         if self.connection.send(payload) > 0:
-            self.log_to_list(self.arm_controller.tag, f"'{joint[0]}' by {na} degrees.", GuiColors.GREEN)
-            self.arm_controller.ujr(joint[0], na)
+            self.log_to_list(self.arm_controller.tag, f"'{joint[0]}' is moving {'upward' if opt == Opts.UP else 'downward'}", GuiColors.GREEN)
+            self.arm_controller.ujr(joint[0], opt)
 
     def show_arm_controller(self):
         if self.arm_controller is None:

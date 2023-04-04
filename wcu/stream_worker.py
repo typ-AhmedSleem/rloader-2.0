@@ -3,7 +3,7 @@ import struct
 import pickle
 from PIL import Image
 from io import BytesIO
-import utils
+import app_utils as utils
 from logger import Logger
 from threading import Thread, Event
 from sockets import ClientSocket
@@ -109,7 +109,12 @@ class StreamHandler:
                 frame_data.seek(0)
                 # Handle the frame
                 image = Image.open(frame_data)
-                image.save(os.path.relpath('wcu\\stream\\lastFrame.jpeg'))
+                try:
+                    os.mkdir(os.path.relpath('stream'))
+                    viewer.logger.success("Stream folder created.")
+                except FileExistsError:
+                    pass
+                image.save(os.path.relpath('stream\\lastFrame.jpeg'))
                 # Pass frame to GUI through callback
                 if not received_first_frame:
                     received_first_frame = True
